@@ -8,7 +8,7 @@
  * Author URI: https://github.com/denis-ershov
  * License: GPL v3 or later
  * Text Domain: refeed
- * Requires PHP: 7.0
+ * Requires PHP: 7.4
  * Requires at least: 6.0
  */
 
@@ -18,10 +18,10 @@ if (!defined('ABSPATH')) {
 }
 
 // Проверка версии PHP
-if (version_compare(PHP_VERSION, '7.0', '<')) {
+if (version_compare(PHP_VERSION, '7.4', '<')) {
     add_action('admin_notices', function() {
         echo '<div class="error"><p>';
-        echo '<strong>ReFeed:</strong> Плагин требует PHP версии 7.0 или выше. ';
+        echo '<strong>ReFeed:</strong> Плагин требует PHP версии 7.4 или выше. ';
         echo 'Текущая версия: ' . PHP_VERSION;
         echo '</p></div>';
     });
