@@ -3,15 +3,29 @@
  * Plugin Name: ReFeed
  * Plugin URI: https://github.com/denis-ershov/refeed
  * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
+ * License: GPL v3 or later
  * Text Domain: refeed
+ * Requires PHP: 7.0
+ * Requires at least: 6.0
  */
 
 // Защита от прямого доступа
 if (!defined('ABSPATH')) {
     exit;
+}
+
+// Проверка версии PHP
+if (version_compare(PHP_VERSION, '7.0', '<')) {
+    add_action('admin_notices', function() {
+        echo '<div class="error"><p>';
+        echo '<strong>ReFeed:</strong> Плагин требует PHP версии 7.0 или выше. ';
+        echo 'Текущая версия: ' . PHP_VERSION;
+        echo '</p></div>';
+    });
+    return;
 }
 
 class ReFeed {
@@ -28,43 +42,6 @@ class ReFeed {
         // Добавляем страницу настроек
         add_action('admin_menu', array($this, 'add_settings_page'));
         add_action('admin_init', array($this, 'register_settings'));
-        
-        // Активация плагина
-        register_activation_hook(__FILE__, array($this, 'activate'));
-        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
-    }
-    
-    /**
-     * Активация плагина
-     */
-    public function activate() {
-        $this->add_rss_endpoint();
-        flush_rewrite_rules();
-        
-        // Установка настроек по умолчанию
-        if (!get_option($this->option_name)) {
-            $defaults = array(
-                'feed_title' => get_bloginfo('name'),
-                'feed_description' => get_bloginfo('description'),
-                'feed_language' => get_locale(),
-                'feed_copyright' => 'Copyright ' . date('Y') . ' ' . get_bloginfo('name'),
-                'managing_editor' => get_option('admin_email') . ' (' . get_bloginfo('name') . ')',
-                'webmaster' => get_option('admin_email') . ' (Webmaster)',
-                'posts_per_feed' => 10,
-                'post_types' => array('post'),
-                'source_meta_key' => 'original_source_link',
-                'author_meta_key' => '',
-                'date_meta_key' => ''
-            );
-            update_option($this->option_name, $defaults);
-        }
-    }
-    
-    /**
-     * Деактивация плагина
-     */
-    public function deactivate() {
-        flush_rewrite_rules();
     }
     
     /**
@@ -409,4 +386,44 @@ update_post_meta($post_id, 'original_date', '2024-01-01 12:00:00');</code></pre>
 }
 
 // Инициализация плагина
-new ReFeed();
+$refeed = new ReFeed();
+
+// Хуки активации и деактивации (должны быть вне класса)
+register_activation_hook(__FILE__, 'refeed_activate');
+register_deactivation_hook(__FILE__, 'refeed_deactivate');
+
+/**
+ * Функция активации плагина
+ */
+function refeed_activate() {
+    // Добавляем endpoint
+    add_rewrite_rule('^refeed/?$', 'index.php?custom_rss_feed=1', 'top');
+    add_rewrite_tag('%custom_rss_feed%', '([^&]+)');
+    flush_rewrite_rules();
+    
+    // Установка настроек по умолчанию
+    $option_name = 'refeed_settings';
+    if (!get_option($option_name)) {
+        $defaults = array(
+            'feed_title' => get_bloginfo('name'),
+            'feed_description' => get_bloginfo('description'),
+            'feed_language' => get_locale(),
+            'feed_copyright' => 'Copyright ' . date('Y') . ' ' . get_bloginfo('name'),
+            'managing_editor' => get_option('admin_email') . ' (' . get_bloginfo('name') . ')',
+            'webmaster' => get_option('admin_email') . ' (Webmaster)',
+            'posts_per_feed' => 10,
+            'post_types' => array('post'),
+            'source_meta_key' => 'original_source_link',
+            'author_meta_key' => '',
+            'date_meta_key' => ''
+        );
+        update_option($option_name, $defaults);
+    }
+}
+
+/**
+ * Функция деактивации плагина
+ */
+function refeed_deactivate() {
+    flush_rewrite_rules();
+}
