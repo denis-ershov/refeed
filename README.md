@@ -126,8 +126,8 @@ WHERE post_type = 'post' AND post_status = 'publish';
       <link>https://yourdomain.com/articles/news-1</link>
       <description><![CDATA[Краткое описание...]]></description>
       <guid isPermaLink="true">https://example.com/news/1</guid>
-      <author>editor@example.com (Имя Автора)</author>
-      <dc:creator>Имя Автора</dc:creator>
+      <author>Fernando Molina</author>
+      <dc:creator>Fernando Molina</dc:creator>
       <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
       <dc:date>2024-01-01T12:00:00Z</dc:date>
     </item>
@@ -146,7 +146,7 @@ WHERE post_type = 'post' AND post_status = 'publish';
 ### Поле `<link>` (ссылка на запись)
 
 - **Всегда** содержит permalink записи на вашем сайте
-- Формат: `https://russpain.com/articles/news-1`
+- Формат: `https://yourdomain.com/articles/news-1`
 
 ### Различие между `<link>` и `<guid>`
 
@@ -155,6 +155,7 @@ WHERE post_type = 'post' AND post_status = 'publish';
 
 ### Автор и дата
 
+- **Автор** выводится только как имя (например: `Fernando Molina`), без email
 - Если мета-поля не указаны, используются стандартные данные WordPress
 - Дата автоматически форматируется в правильный RFC 822 формат
 

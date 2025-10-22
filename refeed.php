@@ -6,7 +6,6 @@
  * Version: 1.0.0
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
- * License: GPL v3 or later
  * Text Domain: refeed
  */
 
@@ -176,7 +175,7 @@ class ReFeed {
       <link><?php echo esc_url(get_permalink($post->ID)); ?></link>
       <description><![CDATA[<?php echo wpautop($post->post_excerpt ? $post->post_excerpt : wp_trim_words($post->post_content, 55)); ?>]]></description>
       <guid isPermaLink="true"><?php echo esc_url($source_link); ?></guid>
-      <author><?php echo esc_html(get_option('admin_email') . ' (' . $author . ')'); ?></author>
+      <author><?php echo esc_html($author); ?></author>
       <dc:creator><?php echo esc_html($author); ?></dc:creator>
       <pubDate><?php echo $pub_date; ?></pubDate>
       <dc:date><?php echo $dc_date; ?></dc:date>
