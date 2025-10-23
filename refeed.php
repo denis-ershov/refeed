@@ -3,7 +3,7 @@
  * Plugin Name: ReFeed
  * Plugin URI: https://github.com/denis-ershov/refeed
  * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
  * License: GPL v3 or later
@@ -49,7 +49,9 @@ class ReFeed {
      */
     public function add_rss_endpoint() {
         add_rewrite_rule('^refeed/?$', 'index.php?custom_rss_feed=1', 'top');
+        add_rewrite_rule('^refeed-([^/]+)/?$', 'index.php?custom_rss_feed=1&feed_suffix=$matches[1]', 'top');
         add_rewrite_tag('%custom_rss_feed%', '([^&]+)');
+        add_rewrite_tag('%feed_suffix%', '([^&]+)');
     }
     
     /**
@@ -57,6 +59,21 @@ class ReFeed {
      */
     public function handle_rss_request() {
         if (get_query_var('custom_rss_feed')) {
+            $settings = get_option($this->option_name);
+            $feed_suffix = get_query_var('feed_suffix');
+            $required_suffix = isset($settings['feed_url_suffix']) ? $settings['feed_url_suffix'] : '';
+            
+            // Если задан суффикс в настройках, проверяем его
+            if (!empty($required_suffix)) {
+                if ($feed_suffix !== $required_suffix) {
+                    // Неправильный суффикс - показываем 404
+                    global $wp_query;
+                    $wp_query->set_404();
+                    status_header(404);
+                    return;
+                }
+            }
+            
             $this->generate_rss();
             exit;
         }
@@ -146,11 +163,20 @@ class ReFeed {
     if (empty($dc_date)) {
         $dc_date = mysql2date('Y-m-d\TH:i:s\Z', $post->post_date_gmt, false);
     }
+    
+    // Получаем описание
+    $description = '';
+    if (!empty($settings['description_meta_key'])) {
+        $description = get_post_meta($post->ID, $settings['description_meta_key'], true);
+    }
+    if (empty($description)) {
+        $description = $post->post_excerpt ? $post->post_excerpt : wp_trim_words($post->post_content, 55);
+    }
 ?>
     <item>
       <title><?php echo esc_html($post->post_title); ?></title>
       <link><?php echo esc_url(get_permalink($post->ID)); ?></link>
-      <description><![CDATA[<?php echo wpautop($post->post_excerpt ? $post->post_excerpt : wp_trim_words($post->post_content, 55)); ?>]]></description>
+      <description><![CDATA[<?php echo wpautop($description); ?>]]></description>
       <guid isPermaLink="true"><?php echo esc_url($source_link); ?></guid>
       <author><?php echo esc_html($author); ?></author>
       <dc:creator><?php echo esc_html($author); ?></dc:creator>
@@ -201,6 +227,7 @@ class ReFeed {
             'managing_editor' => 'Редактор (email и имя)',
             'webmaster' => 'Веб-мастер (email и имя)',
             'posts_per_feed' => 'Количество записей в ленте',
+            'feed_url_suffix' => 'Суффикс URL фида (после дефиса)',
         );
         
         foreach ($fields as $field => $label) {
@@ -226,6 +253,7 @@ class ReFeed {
             'source_meta_key' => 'Мета-поле для ссылки на источник (guid)',
             'author_meta_key' => 'Мета-поле для автора (опционально)',
             'date_meta_key' => 'Мета-поле для даты публикации (опционально)',
+            'description_meta_key' => 'Мета-поле для описания (description)',
         );
         
         foreach ($meta_fields as $field => $label) {
@@ -291,6 +319,21 @@ class ReFeed {
         if (in_array($field, array('source_meta_key', 'author_meta_key', 'date_meta_key'))) {
             echo '<p class="description">Например: original_source_link, source_author, original_date</p>';
         }
+        
+        if ($field === 'description_meta_key') {
+            echo '<p class="description">Мета-поле для кастомного описания в RSS. Если не указано, используется excerpt или обрезанный контент.</p>';
+        }
+        
+        if ($field === 'feed_url_suffix') {
+            echo '<p class="description">Введите уникальную строку для защиты RSS (например: fdskj8fds9sd8f). Оставьте пустым для базового URL /refeed</p>';
+            if (!empty($value)) {
+                $feed_url = home_url('/refeed-' . $value);
+                echo '<p class="description"><strong>Ваш RSS URL:</strong> <a href="' . esc_url($feed_url) . '" target="_blank">' . esc_url($feed_url) . '</a></p>';
+            } else {
+                $feed_url = home_url('/refeed');
+                echo '<p class="description"><strong>Ваш RSS URL:</strong> <a href="' . esc_url($feed_url) . '" target="_blank">' . esc_url($feed_url) . '</a></p>';
+            }
+        }
     }
     
     /**
@@ -324,6 +367,16 @@ class ReFeed {
         $sanitized['source_meta_key'] = sanitize_key($input['source_meta_key']);
         $sanitized['author_meta_key'] = sanitize_key($input['author_meta_key']);
         $sanitized['date_meta_key'] = sanitize_key($input['date_meta_key']);
+        $sanitized['description_meta_key'] = sanitize_key($input['description_meta_key']);
+        
+        // Санитизация суффикса URL (только буквы, цифры и дефисы)
+        $sanitized['feed_url_suffix'] = preg_replace('/[^a-zA-Z0-9\-_]/', '', $input['feed_url_suffix']);
+        
+        // Если суффикс изменился, обновляем rewrite rules
+        $old_settings = get_option($this->option_name);
+        if (!isset($old_settings['feed_url_suffix']) || $old_settings['feed_url_suffix'] !== $sanitized['feed_url_suffix']) {
+            flush_rewrite_rules();
+        }
         
         if (isset($input['post_types']) && is_array($input['post_types'])) {
             $sanitized['post_types'] = array_map('sanitize_key', $input['post_types']);
@@ -348,12 +401,16 @@ class ReFeed {
         }
         
         settings_errors('refeed_messages');
+        
+        $settings = get_option($this->option_name);
+        $feed_suffix = isset($settings['feed_url_suffix']) ? $settings['feed_url_suffix'] : '';
+        $feed_url = !empty($feed_suffix) ? home_url('/refeed-' . $feed_suffix) : home_url('/refeed');
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             
             <div class="notice notice-info">
-                <p><strong>Ваша RSS-лента доступна по адресу:</strong> <a href="<?php echo esc_url(home_url('/refeed')); ?>" target="_blank"><?php echo esc_url(home_url('/refeed')); ?></a></p>
+                <p><strong>Ваша RSS-лента доступна по адресу:</strong> <a href="<?php echo esc_url($feed_url); ?>" target="_blank"><?php echo esc_url($feed_url); ?></a></p>
             </div>
             
             <form action="options.php" method="post">
@@ -398,7 +455,9 @@ register_deactivation_hook(__FILE__, 'refeed_deactivate');
 function refeed_activate() {
     // Добавляем endpoint
     add_rewrite_rule('^refeed/?$', 'index.php?custom_rss_feed=1', 'top');
+    add_rewrite_rule('^refeed-([^/]+)/?$', 'index.php?custom_rss_feed=1&feed_suffix=$matches[1]', 'top');
     add_rewrite_tag('%custom_rss_feed%', '([^&]+)');
+    add_rewrite_tag('%feed_suffix%', '([^&]+)');
     flush_rewrite_rules();
     
     // Установка настроек по умолчанию
@@ -415,7 +474,9 @@ function refeed_activate() {
             'post_types' => array('post'),
             'source_meta_key' => 'original_source_link',
             'author_meta_key' => '',
-            'date_meta_key' => ''
+            'date_meta_key' => '',
+            'feed_url_suffix' => '',
+            'description_meta_key' => ''
         );
         update_option($option_name, $defaults);
     }
