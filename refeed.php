@@ -2,8 +2,8 @@
 /**
  * Plugin Name: ReFeed
  * Plugin URI: https://github.com/denis-ershov/refeed
- * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей
- * Version: 1.0.5
+ * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей и информацией о последнем редакторе
+ * Version: 1.0.6
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
  * License: GPL v3 or later
@@ -177,6 +177,14 @@ class ReFeed {
     $created_date_gmt = $this->get_post_created_date($post->ID);
     $created_date = mysql2date('D, d M Y H:i:s +0000', $created_date_gmt, false);
     $created_date_iso = mysql2date('Y-m-d\TH:i:s\Z', $created_date_gmt, false);
+    
+    // Получаем последнего редактора записи
+    $last_modified_author_id = get_post_meta($post->ID, '_edit_last', true);
+    $last_editor = '';
+    if (!empty($last_modified_author_id)) {
+        $last_editor_obj = get_userdata($last_modified_author_id);
+        $last_editor = $last_editor_obj ? $last_editor_obj->user_login : '';
+    }
 ?>
     <item>
       <title><?php echo esc_html($post->post_title); ?></title>
@@ -189,6 +197,8 @@ class ReFeed {
       <dc:date><?php echo $dc_date; ?></dc:date>
       <createdDate><?php echo $created_date; ?></createdDate>
       <dc:created><?php echo $created_date_iso; ?></dc:created>
+      <lastModifiedBy><?php echo esc_html($last_editor); ?></lastModifiedBy>
+      <dc:lastModifiedBy><?php echo esc_html($last_editor); ?></dc:lastModifiedBy>
     </item>
 <?php endforeach; 
     wp_reset_postdata();

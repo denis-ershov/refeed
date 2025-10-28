@@ -1,2 +1,5 @@
 *.zip
-CHANGELOG.md
+*.md
+*.pdf
+*.xml
+!README.md

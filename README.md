@@ -132,6 +132,8 @@ WHERE post_type = 'post' AND post_status = 'publish';
       <dc:date>2024-01-01T12:00:00Z</dc:date>
       <createdDate>Sun, 15 Dec 2024 08:30:00 GMT</createdDate>
       <dc:created>2024-12-15T08:30:00Z</dc:created>
+      <lastModifiedBy>admin</lastModifiedBy>
+      <dc:lastModifiedBy>admin</dc:lastModifiedBy>
     </item>
   </channel>
 </rss>
@@ -160,6 +162,12 @@ WHERE post_type = 'post' AND post_status = 'publish';
 - **Автор** выводится только как имя (например: `Fernando Molina`), без email
 - Если мета-поля не указаны, используются стандартные данные WordPress
 - Дата автоматически форматируется в правильный RFC 822 формат
+
+### Последний редактор
+
+- Поле `<lastModifiedBy>` и `<dc:lastModifiedBy>` содержит логин (user_login) пользователя, который последний редактировал запись
+- Определяется автоматически через мета-поле WordPress `_edit_last`
+- Если запись не редактировалась, поле будет пустым
 
 ## Troubleshooting
 
