@@ -122,14 +122,16 @@ WHERE post_type = 'post' AND post_status = 'publish';
     <atom:link href="https://yourdomain.com/refeed" rel="self" type="application/rss+xml"/>
     
     <item>
-      <title>Заголовок новости</title>
-      <link>https://yourdomain.com/articles/news-1</link>
-      <description><![CDATA[Краткое описание...]]></description>
-      <guid isPermaLink="true">https://example.com/news/1</guid>
+      <title>Новость дня</title>
+      <link>https://yourdomain.com/news-1</link>
+      <description><![CDATA[Описание...]]></description>
+      <guid isPermaLink="true">https://source.com/original</guid>
       <author>Fernando Molina</author>
       <dc:creator>Fernando Molina</dc:creator>
       <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
       <dc:date>2024-01-01T12:00:00Z</dc:date>
+      <createdDate>Sun, 15 Dec 2024 08:30:00 GMT</createdDate>
+      <dc:created>2024-12-15T08:30:00Z</dc:created>
     </item>
   </channel>
 </rss>

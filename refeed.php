@@ -3,10 +3,10 @@
  * Plugin Name: ReFeed
  * Plugin URI: https://github.com/denis-ershov/refeed
  * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
- * License: GPL v3 or later
+ * License: GPL v2 or later
  * Text Domain: refeed
  * Requires PHP: 7.4
  * Requires at least: 6.0
@@ -172,6 +172,10 @@ class ReFeed {
     if (empty($description)) {
         $description = $post->post_excerpt ? $post->post_excerpt : wp_trim_words($post->post_content, 55);
     }
+    
+    // Получаем дату создания записи
+    $created_date = mysql2date('D, d M Y H:i:s +0000', $post->post_date_gmt, false);
+    $created_date_iso = mysql2date('Y-m-d\TH:i:s\Z', $post->post_date_gmt, false);
 ?>
     <item>
       <title><?php echo esc_html($post->post_title); ?></title>
@@ -182,6 +186,8 @@ class ReFeed {
       <dc:creator><?php echo esc_html($author); ?></dc:creator>
       <pubDate><?php echo $pub_date; ?></pubDate>
       <dc:date><?php echo $dc_date; ?></dc:date>
+      <createdDate><?php echo $created_date; ?></createdDate>
+      <dc:created><?php echo $created_date_iso; ?></dc:created>
     </item>
 <?php endforeach; 
     wp_reset_postdata();
