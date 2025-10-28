@@ -3,7 +3,7 @@
  * Plugin Name: ReFeed
  * Plugin URI: https://github.com/denis-ershov/refeed
  * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
  * License: GPL v3 or later
@@ -173,9 +173,10 @@ class ReFeed {
         $description = $post->post_excerpt ? $post->post_excerpt : wp_trim_words($post->post_content, 55);
     }
     
-    // Получаем дату создания записи
-    $created_date = mysql2date('D, d M Y H:i:s +0000', $post->post_date_gmt, false);
-    $created_date_iso = mysql2date('Y-m-d\TH:i:s\Z', $post->post_date_gmt, false);
+    // Получаем дату создания записи (из первой ревизии или post_date_gmt)
+    $created_date_gmt = $this->get_post_created_date($post->ID);
+    $created_date = mysql2date('D, d M Y H:i:s +0000', $created_date_gmt, false);
+    $created_date_iso = mysql2date('Y-m-d\TH:i:s\Z', $created_date_gmt, false);
 ?>
     <item>
       <title><?php echo esc_html($post->post_title); ?></title>
@@ -195,6 +196,28 @@ class ReFeed {
   </channel>
 </rss>
         <?php
+    }
+    
+    /**
+     * Получает дату создания записи
+     * Проверяет ревизии и возвращает самую раннюю дату
+     */
+    private function get_post_created_date($post_id) {
+        // Получаем все ревизии поста
+        $revisions = wp_get_post_revisions($post_id, array(
+            'order' => 'ASC',
+            'orderby' => 'date'
+        ));
+        
+        // Если есть ревизии, берем дату самой первой
+        if (!empty($revisions)) {
+            $first_revision = reset($revisions);
+            return $first_revision->post_date_gmt;
+        }
+        
+        // Если ревизий нет, используем дату поста
+        $post = get_post($post_id);
+        return $post->post_date_gmt;
     }
     
     /**
