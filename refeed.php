@@ -3,10 +3,10 @@
  * Plugin Name: ReFeed
  * Plugin URI: https://github.com/denis-ershov/refeed
  * Description: Создает кастомную RSS-ленту с возможностью указания источника из мета-полей
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Denis Ershov
  * Author URI: https://github.com/denis-ershov
- * License: GPL v2 or later
+ * License: GPL v3 or later
  * Text Domain: refeed
  * Requires PHP: 7.4
  * Requires at least: 6.0
@@ -363,20 +363,20 @@ class ReFeed {
     public function sanitize_settings($input) {
         $sanitized = array();
         
-        $sanitized['feed_title'] = sanitize_text_field($input['feed_title']);
-        $sanitized['feed_description'] = sanitize_textarea_field($input['feed_description']);
-        $sanitized['feed_language'] = sanitize_text_field($input['feed_language']);
-        $sanitized['feed_copyright'] = sanitize_text_field($input['feed_copyright']);
-        $sanitized['managing_editor'] = sanitize_text_field($input['managing_editor']);
-        $sanitized['webmaster'] = sanitize_text_field($input['webmaster']);
-        $sanitized['posts_per_feed'] = absint($input['posts_per_feed']);
-        $sanitized['source_meta_key'] = sanitize_key($input['source_meta_key']);
-        $sanitized['author_meta_key'] = sanitize_key($input['author_meta_key']);
-        $sanitized['date_meta_key'] = sanitize_key($input['date_meta_key']);
-        $sanitized['description_meta_key'] = sanitize_key($input['description_meta_key']);
+        $sanitized['feed_title'] = isset($input['feed_title']) ? sanitize_text_field($input['feed_title']) : '';
+        $sanitized['feed_description'] = isset($input['feed_description']) ? sanitize_textarea_field($input['feed_description']) : '';
+        $sanitized['feed_language'] = isset($input['feed_language']) ? sanitize_text_field($input['feed_language']) : 'ru';
+        $sanitized['feed_copyright'] = isset($input['feed_copyright']) ? sanitize_text_field($input['feed_copyright']) : '';
+        $sanitized['managing_editor'] = isset($input['managing_editor']) ? sanitize_text_field($input['managing_editor']) : '';
+        $sanitized['webmaster'] = isset($input['webmaster']) ? sanitize_text_field($input['webmaster']) : '';
+        $sanitized['posts_per_feed'] = isset($input['posts_per_feed']) ? absint($input['posts_per_feed']) : 10;
+        $sanitized['source_meta_key'] = isset($input['source_meta_key']) ? sanitize_key($input['source_meta_key']) : '';
+        $sanitized['author_meta_key'] = isset($input['author_meta_key']) ? sanitize_key($input['author_meta_key']) : '';
+        $sanitized['date_meta_key'] = isset($input['date_meta_key']) ? sanitize_key($input['date_meta_key']) : '';
+        $sanitized['description_meta_key'] = isset($input['description_meta_key']) ? sanitize_key($input['description_meta_key']) : '';
         
         // Санитизация суффикса URL (только буквы, цифры и дефисы)
-        $sanitized['feed_url_suffix'] = preg_replace('/[^a-zA-Z0-9\-_]/', '', $input['feed_url_suffix']);
+        $sanitized['feed_url_suffix'] = isset($input['feed_url_suffix']) ? preg_replace('/[^a-zA-Z0-9\-_]/', '', $input['feed_url_suffix']) : '';
         
         // Если суффикс изменился, обновляем rewrite rules
         $old_settings = get_option($this->option_name);
@@ -458,39 +458,43 @@ register_deactivation_hook(__FILE__, 'refeed_deactivate');
 /**
  * Функция активации плагина
  */
-function refeed_activate() {
-    // Добавляем endpoint
-    add_rewrite_rule('^refeed/?$', 'index.php?custom_rss_feed=1', 'top');
-    add_rewrite_rule('^refeed-([^/]+)/?$', 'index.php?custom_rss_feed=1&feed_suffix=$matches[1]', 'top');
-    add_rewrite_tag('%custom_rss_feed%', '([^&]+)');
-    add_rewrite_tag('%feed_suffix%', '([^&]+)');
-    flush_rewrite_rules();
-    
-    // Установка настроек по умолчанию
-    $option_name = 'refeed_settings';
-    if (!get_option($option_name)) {
-        $defaults = array(
-            'feed_title' => get_bloginfo('name'),
-            'feed_description' => get_bloginfo('description'),
-            'feed_language' => get_locale(),
-            'feed_copyright' => 'Copyright ' . date('Y') . ' ' . get_bloginfo('name'),
-            'managing_editor' => get_option('admin_email') . ' (' . get_bloginfo('name') . ')',
-            'webmaster' => get_option('admin_email') . ' (Webmaster)',
-            'posts_per_feed' => 10,
-            'post_types' => array('post'),
-            'source_meta_key' => 'original_source_link',
-            'author_meta_key' => '',
-            'date_meta_key' => '',
-            'feed_url_suffix' => '',
-            'description_meta_key' => ''
-        );
-        update_option($option_name, $defaults);
+if (!function_exists('refeed_activate')) {
+    function refeed_activate() {
+        // Добавляем endpoint
+        add_rewrite_rule('^refeed/?$', 'index.php?custom_rss_feed=1', 'top');
+        add_rewrite_rule('^refeed-([^/]+)/?$', 'index.php?custom_rss_feed=1&feed_suffix=$matches[1]', 'top');
+        add_rewrite_tag('%custom_rss_feed%', '([^&]+)');
+        add_rewrite_tag('%feed_suffix%', '([^&]+)');
+        flush_rewrite_rules();
+        
+        // Установка настроек по умолчанию
+        $option_name = 'refeed_settings';
+        if (!get_option($option_name)) {
+            $defaults = array(
+                'feed_title' => get_bloginfo('name'),
+                'feed_description' => get_bloginfo('description'),
+                'feed_language' => get_locale(),
+                'feed_copyright' => 'Copyright ' . date('Y') . ' ' . get_bloginfo('name'),
+                'managing_editor' => get_option('admin_email') . ' (' . get_bloginfo('name') . ')',
+                'webmaster' => get_option('admin_email') . ' (Webmaster)',
+                'posts_per_feed' => 10,
+                'post_types' => array('post'),
+                'source_meta_key' => 'original_source_link',
+                'author_meta_key' => '',
+                'date_meta_key' => '',
+                'feed_url_suffix' => '',
+                'description_meta_key' => ''
+            );
+            update_option($option_name, $defaults);
+        }
     }
 }
 
 /**
  * Функция деактивации плагина
  */
-function refeed_deactivate() {
-    flush_rewrite_rules();
+if (!function_exists('refeed_deactivate')) {
+    function refeed_deactivate() {
+        flush_rewrite_rules();
+    }
 }
